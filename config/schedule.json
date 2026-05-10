@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "enabled": true,
+  "schedule": {
+    "type": "daily",
+    "time": "08:00",
+    "timezone": "Asia/Shanghai",
+    "notify_channels": ["console", "file"],
+    "language": "both"
+  },
+  "advanced": {
+    "weekend_enabled": true,
+    "holiday_enabled": true,
+    "max_retry": 3
+  }
+}

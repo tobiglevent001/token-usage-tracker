@@ -1,0 +1,19 @@
+#敏感文件 - 不要提交 API Key
+config/auth.json
+
+# 输出文件 - 运行时生成
+output/*.json
+output/*.md
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# 临时文件
+*.tmp
+*.log

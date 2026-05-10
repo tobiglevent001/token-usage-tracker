@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token 消耗报告 - 精简版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5;
+            padding: 16px;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* 头部 + 日期选择 - 合并为一行 */
+        .header-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header-bar h1 { font-size: 20px; font-weight: 600; white-space: nowrap; }
+        .header-bar .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+        .date-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+        .date-btn {
+            padding: 5px 12px;
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 16px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .date-btn:hover { background: rgba(255,255,255,0.25); }
+        .date-btn.active { background: white; color: #667eea; border-color: white; }
+        .date-custom { display: flex; align-items: center; gap: 4px; }
+        .date-custom input {
+            padding: 3px 6px;
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 11px;
+            width: 110px;
+        }
+        .date-custom input::placeholder { color: rgba(255,255,255,0.6); }
+        .date-custom button {
+            padding: 3px 10px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        /* 汇总卡片 - 更紧凑 */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 16px 24px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .stat-card .label { font-size: 11px; color: #999; margin-bottom: 4px; }
+        .stat-card .value { font-size: 22px; font-weight: 600; color: #667eea; }
+        .stat-card .sub { font-size: 11px; color: #999; margin-top: 2px; }
+        .stat-card .trend { font-size: 12px; margin-top: 4px; }
+
+        /* 图表区域 - 重新布局，一屏显示 */
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 16px 24px;
+        }
+        .chart-box {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .chart-box h3 { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 12px; }
+        .chart-box .chart { width: 100%; height: 260px; }
+
+        /* 主趋势图 - 单独一行，更大 */
+        .main-chart {
+            padding: 0 24px 16px;
+        }
+        .main-chart .chart-box { padding: 16px; }
+        .main-chart .chart { height: 300px; }
+
+        /* 告警 - 紧凑 */
+        .alerts {
+            padding: 0 24px 16px;
+        }
+        .alert-item {
+            background: #fff3cd;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border-left: 3px solid #ffc107;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .alert-item strong { color: #856404; }
+
+        .footer {
+            padding: 12px 24px;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+
+        @media (max-width: 900px) {
+            .summary { grid-template-columns: repeat(2, 1fr); }
+            .charts { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部：标题 + 日期选择（合并一行） -->
+        <div class="header-bar">
+            <div>
+                <h1>📊 Token 消耗报告</h1>
+                <div class="subtitle" id="reportRange">2026-04-11 ~ 2026-05-10 | 共 30 天</div>
+            </div>
+            <div class="date-selector">
+                <button class="date-btn" data-days="1">今天</button>
+                <button class="date-btn" data-days="3">3天</button>
+                <button class="date-btn" data-days="7">7天</button>
+                <button class="date-btn active" data-days="30">30天</button>
+                <button class="date-btn" data-days="180">半年</button>
+                <button class="date-btn" data-days="365">1年</button>
+                <div class="date-custom">
+                    <input type="date" id="startDate" placeholder="开始">
+                    <span style="color:rgba(255,255,255,0.7);font-size:11px;">至</span>
+                    <input type="date" id="endDate" placeholder="结束">
+                    <button onclick="applyCustomRange()">应用</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 汇总卡片（4个，紧凑） -->
+        <div class="summary">
+            <div class="stat-card">
+                <div class="label">总消耗</div>
+                <div class="value" id="totalCost">¥340.20</div>
+                <div class="sub">$47.25 USD</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">日均消耗</div>
+                <div class="value" id="avgCost">¥11.34</div>
+                <div class="sub">$1.57 / 天</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">腾讯云占比</div>
+                <div class="value" style="color:#764ba2;" id="tencentPercent">58.3%</div>
+                <div class="sub" id="tencentCost">¥198.50</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">DeepSeek 占比</div>
+                <div class="value" style="color:#28a745;" id="deepseekPercent">41.7%</div>
+                <div class="sub" id="deepseekCost">¥141.70</div>
+            </div>
+        </div>
+
+        <!-- 主图：平台分层趋势（最重要，单独一行） -->
+        <div class="main-chart">
+            <div class="chart-box">
+                <h3>📈 各平台消耗趋势</h3>
+                <div id="trendChart" class="chart"></div>
+            </div>
+        </div>
+
+        <!-- 两个辅助图（并排） -->
+        <div class="charts">
+            <!-- 平台占比（当前所选时间段汇总） -->
+            <div class="chart-box">
+                <h3>🥧 平台消耗占比</h3>
+                <div id="pieChart" class="chart"></div>
+            </div>
+            <!-- 平台占比变化趋势（堆叠面积图） -->
+            <div class="chart-box">
+                <h3>📊 平台占比变化趋势</h3>
+                <div id="stackChart" class="chart"></div>
+            </div>
+        </div>
+
+        <!-- 告警 -->
+        <div class="alerts" id="alertsSection">
+            <div class="alert-item">
+                <strong>⚠️ DeepSeek 05-09 消耗异常</strong><br>
+                <span style="color:#666;">单日消耗 ¥9.80，超过所选时间段日均 85%</span>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            生成时间: 2026-05-10 12:15 | Token Usage Tracker v1.0 | 数据来源: Tencent Cloud TokenHub, DeepSeek
+        </div>
+    </div>
+
+    <script>
+        // 按时间段组织的完整数据
+        const mockData = {
+            1: {
+                dates: ['05-10'],
+                tencent: [8.2],
+                deepseek: [4.3],
+                total: 12.5,
+                tencentTotal: 8.2,
+                deepseekTotal: 4.3
+            },
+            3: {
+                dates: ['05-08', '05-09', '05-10'],
+                tencent: [6.5, 7.8, 8.2],
+                deepseek: [4.3, 6.4, 4.3],
+                total: 37.5,
+                tencentTotal: 22.5,
+                deepseekTotal: 15.0
+            },
+            7: {
+                dates: ['05-04', '05-05', '05-06', '05-07', '05-08', '05-09', '05-10'],
+                tencent: [5.2, 5.8, 4.9, 6.5, 6.5, 7.8, 8.2],
+                deepseek: [4.3, 4.4, 3.9, 5.0, 4.3, 6.4, 4.3],
+                total: 77.5,
+                tencentTotal: 44.9,
+                deepseekTotal: 32.6
+            },
+            30: {
+                dates: ['04-11', '04-15', '04-20', '04-25', '04-30', '05-05', '05-10'],
+                tencent: [5.5, 6.0, 6.8, 7.2, 7.5, 5.8, 8.2],
+                deepseek: [3.0, 3.2, 3.7, 4.6, 4.5, 4.4, 4.3],
+                total: 340.2,
+                tencentTotal: 198.5,
+                deepseekTotal: 141.7
+            },
+            180: {
+                dates: ['2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
+                tencent: [160, 175, 165, 180, 192, 198, 198],
+                deepseek: [120, 135, 130, 140, 146, 142, 142],
+                total: 1923.0,
+                tencentTotal: 1120.0,
+                deepseekTotal: 803.0
+            },
+            365: {
+                dates: ['2025-Q2', '2025-Q3', '2025-Q4', '2026-Q1', '2026-Q2'],
+                tencent: [480, 520, 510, 550, 340],
+                deepseek: [350, 380, 375, 400, 230],
+                total: 3895.0,
+                tencentTotal: 2250.0,
+                deepseekTotal: 1645.0
+            },
+            1095: {
+                dates: ['2023', '2024', '2025', '2026'],
+                tencent: [1200, 1800, 2250, 2250],
+                deepseek: [900, 1400, 1645, 1645],
+                total: 12595.0,
+                tencentTotal: 7200.0,
+                deepseekTotal: 5395.0
+            }
+        };
+
+        let currentDays = 30;
+        let charts = {};
+
+        function initCharts(days) {
+            const data = mockData[days] || mockData[30];
+            const tencentPct = ((data.tencentTotal / data.total) * 100).toFixed(1);
+            const deepseekPct = ((data.deepseekTotal / data.total) * 100).toFixed(1);
+            const daysCount = data.dates.length;
+            const avgCost = data.total / daysCount;
+
+            // 更新文字
+            document.getElementById('reportRange').textContent = 
+                `${data.dates[0]} ~ ${data.dates[daysCount-1]} | 共 ${daysCount} 天`;
+            document.getElementById('totalCost').textContent = '¥' + data.total.toFixed(2);
+            document.getElementById('avgCost').textContent = '¥' + avgCost.toFixed(2);
+            document.getElementById('tencentPercent').textContent = tencentPct + '%';
+            document.getElementById('tencentCost').textContent = '¥' + data.tencentTotal.toFixed(2);
+            document.getElementById('deepseekPercent').textContent = deepseekPct + '%';
+            document.getElementById('deepseekCost').textContent = '¥' + data.deepseekTotal.toFixed(2);
+
+            // 1. 主图：平台分层趋势（多条线）
+            charts.trend = echarts.init(document.getElementById('trendChart'));
+            charts.trend.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['腾讯云 TokenHub', 'DeepSeek'], top: 0, textStyle: { fontSize: 12 } },
+                grid: { left: 60, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: data.dates, axisLabel: { fontSize: 11 } },
+                yAxis: { type: 'value', name: '消耗 (¥)', nameTextStyle: { fontSize: 11 }, axisLabel: { fontSize: 11 } },
+                series: [
+                    {
+                        name: '腾讯云 TokenHub',
+                        type: 'line',
+                        data: data.tencent,
+                        smooth: true,
+                        lineStyle: { color: '#667eea', width: 2 },
+                        itemStyle: { color: '#667eea' },
+                        areaStyle: { color: 'rgba(102,126,234,0.08)' }
+                    },
+                    {
+                        name: 'DeepSeek',
+                        type: 'line',
+                        data: data.deepseek,
+                        smooth: true,
+                        lineStyle: { color: '#764ba2', width: 2 },
+                        itemStyle: { color: '#764ba2' },
+                        areaStyle: { color: 'rgba(118,75,162,0.08)' }
+                    }
+                ]
+            });
+
+            // 2. 饼图：平台占比（所选时间段汇总）
+            charts.pie = echarts.init(document.getElementById('pieChart'));
+            charts.pie.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+                legend: { bottom: 0, textStyle: { fontSize: 11 } },
+                grid: { left: 20, right: 20, top: 20, bottom: 40 },
+                series: [{
+                    type: 'pie',
+                    radius: ['45%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: true, formatter: '{b}\n¥{c}', fontSize: 11 },
+                    data: [
+                        { value: data.tencentTotal, name: '腾讯云', itemStyle: { color: '#667eea' } },
+                        { value: data.deepseekTotal, name: 'DeepSeek', itemStyle: { color: '#764ba2' } }
+                    ]
+                }]
+            });
+
+            // 3. 堆叠面积图：平台占比变化趋势
+            charts.stack = echarts.init(document.getElementById('stackChart'));
+            charts.stack.setOption({
+                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+                legend: { data: ['腾讯云', 'DeepSeek'], top: 0, textStyle: { fontSize: 12 } },
+                grid: { left: 60, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: data.dates, axisLabel: { fontSize: 11 } },
+                yAxis: { type: 'value', name: '消耗 (¥)', nameTextStyle: { fontSize: 11 }, axisLabel: { fontSize: 11 } },
+                series: [
+                    {
+                        name: '腾讯云',
+                        type: 'line',
+                        stack: 'Total',
+                        areaStyle: { color: 'rgba(102,126,234,0.35)' },
+                        lineStyle: { color: '#667eea', width: 1.5 },
+                        itemStyle: { color: '#667eea' },
+                        data: data.tencent
+                    },
+                    {
+                        name: 'DeepSeek',
+                        type: 'line',
+                        stack: 'Total',
+                        areaStyle: { color: 'rgba(118,75,162,0.35)' },
+                        lineStyle: { color: '#764ba2', width: 1.5 },
+                        itemStyle: { color: '#764ba2' },
+                        data: data.deepseek
+                    }
+                ]
+            });
+
+            // 响应式
+            window.addEventListener('resize', () => {
+                Object.values(charts).forEach(c => c.resize());
+            });
+        }
+
+        // 日期按钮
+        document.querySelectorAll('.date-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentDays = parseInt(this.dataset.days);
+                initCharts(currentDays);
+            });
+        });
+
+        function applyCustomRange() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (start && end) {
+                alert('自定义范围: ' + start + ' 至 ' + end);
+            } else {
+                alert('请选择开始和结束日期！');
+            }
+        }
+
+        // 初始化
+        initCharts(currentDays);
+    </script>
+</body>
+</html>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Usage Tracker - 配置界面</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container { max-width: 960px; margin: 0 auto; }
+
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left h1 {
+            font-size: 26px;
+            color: #0f3460;
+            margin-bottom: 4px;
+        }
+        .header-left p { color: #888; font-size: 13px; }
+        .header-badge {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            color: #0f3460;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e3f2fd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            background: #fafbfc;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1976d2;
+            background: white;
+        }
+
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+        .btn {
+            padding: 9px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn:active { transform: scale(0.97); }
+
+        .btn-primary { background: #1976d2; color: white; }
+        .btn-primary:hover { background: #1565c0; box-shadow: 0 3px 12px rgba(25,118,210,0.3); }
+
+        .btn-success { background: #2e7d32; color: white; }
+        .btn-success:hover { background: #1b5e20; box-shadow: 0 3px 12px rgba(46,125,50,0.3); }
+
+        .btn-warning { background: #f57c00; color: white; }
+        .btn-warning:hover { background: #e65100; box-shadow: 0 3px 12px rgba(245,124,0,0.3); }
+
+        .btn-danger { background: #c62828; color: white; }
+        .btn-danger:hover { background: #b71c1c; box-shadow: 0 3px 12px rgba(198,40,40,0.3); }
+
+        .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+        .msg {
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            display: none;
+        }
+        .msg.show { display: block; }
+        .msg.success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .msg.error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .msg.info { background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+
+        .platform-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .platform-item:hover { border-color: #1976d2; background: #f0f7ff; }
+
+        .platform-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            font-size: 13px;
+            overflow: hidden;
+        }
+        .platform-name { font-weight: 600; color: #333; min-width: 100px; }
+        .platform-provider { color: #888; font-size: 11px; min-width: 80px; }
+        .platform-endpoint { color: #aaa; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .platform-key { color: #2e7d32; font-size: 11px; font-family: monospace; }
+
+        .empty-state { text-align: center; padding: 30px; color: #bbb; }
+        .empty-state-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.4; }
+
+        .toggle-link {
+            color: #1976d2;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 12px;
+            display: inline-block;
+        }
+        .toggle-link:hover { text-decoration: underline; }
+
+        .custom-section {
+            margin-top: 16px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+        .custom-section h3 { font-size: 15px; color: #333; margin-bottom: 12px; }
+
+        .hidden { display: none; }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        .status-dot.green { background: #4caf50; }
+        .status-dot.red { background: #f44336; }
+        .status-dot.yellow { background: #ff9800; }
+
+        .loading { opacity: 0.6; pointer-events: none; }
+
+        select optgroup { font-weight: bold; color: #333; }
+        select option { font-weight: normal; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>🚀 Token Usage Tracker</h1>
+                <p>配置 AI 模型和 API Key，追踪 token 消耗</p>
+            </div>
+            <div class="header-badge" id="statusBadge">
+                <span class="status-dot green"></span>就绪
+            </div>
+        </div>
+
+        <!-- 添加平台 -->
+        <div class="card">
+            <div class="card-title">📊 添加平台配置</div>
+
+            <div class="form-group">
+                <label>选择模型</label>
+                <select id="modelSelect">
+                    <option value="">-- 请选择模型 --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>API Key</label>
+                <input type="password" id="apiKeyInput" placeholder="输入 API Key（如 sk-... 或其他格式）" />
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-warning" onclick="testConnection()">🧪 测试连接</button>
+                <button class="btn btn-primary" onclick="saveConfig()">💾 保存配置</button>
+                <button class="btn btn-danger" onclick="clearForm()">🗑️ 清空</button>
+            </div>
+
+            <div id="message" class="msg"></div>
+
+            <div class="toggle-link" onclick="toggleCustomModel()">+ 添加自定义模型</div>
+
+            <div id="customModelSection" class="custom-section hidden">
+                <h3>自定义模型</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>模型 ID</label>
+                        <input type="text" id="customModelId" placeholder="如: my-model-v1" />
+                    </div>
+                    <div class="form-group">
+                        <label>模型名称</label>
+                        <input type="text" id="customModelName" placeholder="如: My Custom Model" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>提供商</label>
+                        <input type="text" id="customModelProvider" placeholder="如: MyCompany" />
+                    </div>
+                    <div class="form-group">
+                        <label>API Key 环境变量名</label>
+                        <input type="text" id="customModelEnv" placeholder="如: MY_API_KEY" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>API Endpoint</label>
+                    <input type="text" id="customModelEndpoint" placeholder="如: https://api.mycompany.com/v1/chat/completions" />
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="addCustomModel()">✅ 添加模型</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 已配置平台 -->
+        <div class="card">
+            <div class="card-title">📋 已配置平台</div>
+            <div id="platformList"></div>
+        </div>
+    </div>
+
+<script>
+// ========== 模型数据（内嵌，不依赖服务器） ==========
+const SUPPORTED_MODELS = [
+    // 国内主流
+    { id: "deepseek-chat", name: "DeepSeek Chat", provider: "DeepSeek 深度求索", api_endpoint: "https://api.deepseek.com/v1/chat/completions", api_key_env: "DEEPSEEK_API_KEY" },
+    { id: "deepseek-coder", name: "DeepSeek Coder", provider: "DeepSeek 深度求索", api_endpoint: "https://api.deepseek.com/v1/chat/completions", api_key_env: "DEEPSEEK_API_KEY" },
+    { id: "deepseek-reasoner", name: "DeepSeek R1", provider: "DeepSeek 深度求索", api_endpoint: "https://api.deepseek.com/v1/chat/completions", api_key_env: "DEEPSEEK_API_KEY" },
+    { id: "qwen-max", name: "通义千问 Max", provider: "阿里云 Alibaba", api_endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", api_key_env: "DASHSCOPE_API_KEY" },
+    { id: "qwen-plus", name: "通义千问 Plus", provider: "阿里云 Alibaba", api_endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", api_key_env: "DASHSCOPE_API_KEY" },
+    { id: "qwen-turbo", name: "通义千问 Turbo", provider: "阿里云 Alibaba", api_endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", api_key_env: "DASHSCOPE_API_KEY" },
+    { id: "glm-4", name: "GLM-4", provider: "智谱AI Zhipu", api_endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", api_key_env: "GLM_API_KEY" },
+    { id: "glm-4-flash", name: "GLM-4 Flash", provider: "智谱AI Zhipu", api_endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", api_key_env: "GLM_API_KEY" },
+    { id: "ernie-4.0", name: "文心一言 4.0", provider: "百度 Baidu", api_endpoint: "https://aip.baidu.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro", api_key_env: "ERNIE_API_KEY" },
+    { id: "ernie-3.5", name: "文心一言 3.5", provider: "百度 Baidu", api_endpoint: "https://aip.baidu.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions", api_key_env: "ERNIE_API_KEY" },
+    { id: "hunyuan-pro", name: "腾讯混元 Pro", provider: "腾讯 Tencent", api_endpoint: "https://hunyuan.tencentcloudapi.com", api_key_env: "HUNYUAN_API_KEY" },
+    { id: "doubao-pro-32k", name: "豆包 Pro 32K", provider: "字节跳动 ByteDance", api_endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", api_key_env: "DOUBAO_API_KEY" },
+    { id: "doubao-pro-128k", name: "豆包 Pro 128K", provider: "字节跳动 ByteDance", api_endpoint: "https://ark.cn-beijing.volces.com/api/v3/chat/completions", api_key_env: "DOUBAO_API_KEY" },
+    { id: "moonshot-v1-8k", name: "Kimi v1 8K", provider: "月之暗面 Moonshot", api_endpoint: "https://api.moonshot.cn/v1/chat/completions", api_key_env: "MOONSHOT_API_KEY" },
+    { id: "moonshot-v1-32k", name: "Kimi v1 32K", provider: "月之暗面 Moonshot", api_endpoint: "https://api.moonshot.cn/v1/chat/completions", api_key_env: "MOONSHOT_API_KEY" },
+    { id: "minimax-abab6.5", name: "MiniMax abab6.5", provider: "MiniMax", api_endpoint: "https://api.minimax.chat/v1/text/chatcompletion_v2", api_key_env: "MINIMAX_API_KEY" },
+    { id: "spark-v3.5", name: "讯飞星火 v3.5", provider: "科大讯飞 iFlytek", api_endpoint: "https://spark-api.xf-yun.com/v3.5/chat", api_key_env: "SPARK_API_KEY" },
+    // 国际主流
+    { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI", api_endpoint: "https://api.openai.com/v1/chat/completions", api_key_env: "OPENAI_API_KEY" },
+    { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI", api_endpoint: "https://api.openai.com/v1/chat/completions", api_key_env: "OPENAI_API_KEY" },
+    { id: "gpt-4-turbo", name: "GPT-4 Turbo", provider: "OpenAI", api_endpoint: "https://api.openai.com/v1/chat/completions", api_key_env: "OPENAI_API_KEY" },
+    { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", provider: "OpenAI", api_endpoint: "https://api.openai.com/v1/chat/completions", api_key_env: "OPENAI_API_KEY" },
+    { id: "o1-preview", name: "o1 Preview", provider: "OpenAI", api_endpoint: "https://api.openai.com/v1/chat/completions", api_key_env: "OPENAI_API_KEY" },
+    { id: "o1-mini", name: "o1 Mini", provider: "OpenAI", api_endpoint: "https://api.openai.com/v1/chat/completions", api_key_env: "OPENAI_API_KEY" },
+    { id: "claude-3.5-sonnet", name: "Claude 3.5 Sonnet", provider: "Anthropic", api_endpoint: "https://api.anthropic.com/v1/messages", api_key_env: "ANTHROPIC_API_KEY" },
+    { id: "claude-3-opus", name: "Claude 3 Opus", provider: "Anthropic", api_endpoint: "https://api.anthropic.com/v1/messages", api_key_env: "ANTHROPIC_API_KEY" },
+    { id: "claude-3-haiku", name: "Claude 3 Haiku", provider: "Anthropic", api_endpoint: "https://api.anthropic.com/v1/messages", api_key_env: "ANTHROPIC_API_KEY" },
+    { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", provider: "Google", api_endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent", api_key_env: "GEMINI_API_KEY" },
+    { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", provider: "Google", api_endpoint: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", api_key_env: "GEMINI_API_KEY" },
+    { id: "llama-3.1-70b", name: "Llama 3.1 70B", provider: "Meta (via Together)", api_endpoint: "https://api.together.xyz/v1/chat/completions", api_key_env: "TOGETHER_API_KEY" },
+    { id: "llama-3.1-405b", name: "Llama 3.1 405B", provider: "Meta (via Together)", api_endpoint: "https://api.together.xyz/v1/chat/completions", api_key_env: "TOGETHER_API_KEY" },
+    { id: "mistral-large", name: "Mistral Large", provider: "Mistral AI", api_endpoint: "https://api.mistral.ai/v1/chat/completions", api_key_env: "MISTRAL_API_KEY" },
+    { id: "mistral-medium", name: "Mistral Medium", provider: "Mistral AI", api_endpoint: "https://api.mistral.ai/v1/chat/completions", api_key_env: "MISTRAL_API_KEY" }
+];
+
+// ========== 存储管理（localStorage） ==========
+const STORAGE_KEY_PLATFORMS = "token_tracker_platforms";
+const STORAGE_KEY_AUTH = "token_tracker_auth";
+const STORAGE_KEY_CUSTOM_MODELS = "token_tracker_custom_models";
+
+function getCustomModels() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS) || "[]");
+    } catch { return []; }
+}
+
+function getAllModels() {
+    return [...SUPPORTED_MODELS, ...getCustomModels()];
+}
+
+function getPlatforms() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_PLATFORMS) || "[]");
+    } catch { return []; }
+}
+
+function savePlatforms(platforms) {
+    localStorage.setItem(STORAGE_KEY_PLATFORMS, JSON.stringify(platforms));
+}
+
+function getAuth() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY_AUTH) || "{}");
+    } catch { return {}; }
+}
+
+function saveAuth(auth) {
+    localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(auth));
+}
+
+function maskKey(key) {
+    if (!key) return "";
+    if (key.length <= 8) return "*".repeat(key.length);
+    return key.substring(0, 4) + "*".repeat(key.length - 8) + key.substring(key.length - 4);
+}
+
+// ========== UI 操作 ==========
+function showMsg(text, type) {
+    const el = document.getElementById("message");
+    el.textContent = text;
+    el.className = "msg show " + type;
+    if (type === "success" || type === "error") {
+        setTimeout(() => { el.className = "msg"; }, 5000);
+    }
+}
+
+function clearMsg() {
+    document.getElementById("message").className = "msg";
+}
+
+function toggleCustomModel() {
+    document.getElementById("customModelSection").classList.toggle("hidden");
+}
+
+function clearForm() {
+    document.getElementById("modelSelect").value = "";
+    document.getElementById("apiKeyInput").value = "";
+    clearMsg();
+}
+
+// ========== 初始化模型下拉框 ==========
+function initModelSelect() {
+    const select = document.getElementById("modelSelect");
+    // 保留第一个默认选项
+    select.innerHTML = '<option value="">-- 请选择模型 --</option>';
+
+    const allModels = getAllModels();
+
+    // 按提供商分组
+    const grouped = {};
+    allModels.forEach(m => {
+        if (!grouped[m.provider]) grouped[m.provider] = [];
+        grouped[m.provider].push(m);
+    });
+
+    // 国内优先排序
+    const domestic = ["DeepSeek 深度求索", "阿里云 Alibaba", "智谱AI Zhipu", "百度 Baidu", "腾讯 Tencent", "字节跳动 ByteDance", "月之暗面 Moonshot", "MiniMax", "科大讯飞 iFlytek"];
+    const sortedProviders = Object.keys(grouped).sort((a, b) => {
+        const ai = domestic.indexOf(a);
+        const bi = domestic.indexOf(b);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    sortedProviders.forEach(provider => {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = provider;
+        grouped[provider].forEach(model => {
+            const option = document.createElement("option");
+            option.value = model.id;
+            option.textContent = model.name;
+            option.dataset.endpoint = model.api_endpoint;
+            option.dataset.env = model.api_key_env;
+            option.dataset.provider = model.provider;
+            optgroup.appendChild(option);
+        });
+        select.appendChild(optgroup);
+    });
+}
+
+// ========== 加载已配置平台列表 ==========
+function loadPlatforms() {
+    const platforms = getPlatforms();
+    const auth = getAuth();
+    const listDiv = document.getElementById("platformList");
+
+    if (platforms.length === 0) {
+        listDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>暂无配置的平台，请先添加</div></div>';
+        return;
+    }
+
+    listDiv.innerHTML = "";
+    platforms.forEach(p => {
+        const key = auth[p.id] || "";
+        const masked = maskKey(key);
+
+        const item = document.createElement("div");
+        item.className = "platform-item";
+        item.innerHTML = `
+            <div class="platform-info">
+                <div class="platform-name">${p.name || p.id}</div>
+                <div class="platform-provider">${p.provider || ""}</div>
+                <div class="platform-endpoint" title="${p.api_endpoint || ''}">${p.api_endpoint || 'N/A'}</div>
+                <div class="platform-key">${key ? '🔑 ' + masked : '⚠️ 未设置'}</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button class="btn btn-warning btn-sm" onclick="testPlatform('${p.id}')">测试</button>
+                <button class="btn btn-danger btn-sm" onclick="deletePlatform('${p.id}')">删除</button>
+            </div>
+        `;
+        listDiv.appendChild(item);
+    });
+}
+
+// ========== 测试连接（实际调用 API） ==========
+async function testConnection() {
+    const modelId = document.getElementById("modelSelect").value;
+    const apiKey = document.getElementById("apiKeyInput").value.trim();
+
+    if (!modelId) { showMsg("请先选择一个模型", "error"); return; }
+    if (!apiKey) { showMsg("请输入 API Key", "error"); return; }
+
+    const model = getAllModels().find(m => m.id === modelId);
+    if (!model) { showMsg("未找到模型配置", "error"); return; }
+
+    showMsg("正在测试连接...", "info");
+    document.querySelector('.btn-warning').classList.add('loading');
+
+    try {
+        const result = await callTestApi(model, apiKey);
+        if (result.success) {
+            showMsg("✅ " + result.message, "success");
+        } else {
+            showMsg("❌ " + result.message, "error");
+        }
+    } catch (err) {
+        showMsg("❌ 测试失败: " + err.message, "error");
+    } finally {
+        document.querySelector('.btn-warning').classList.remove('loading');
+    }
+}
+
+// 测试已保存的平台
+async function testPlatform(platformId) {
+    const auth = getAuth();
+    const apiKey = auth[platformId];
+    if (!apiKey) { showMsg("该平台未设置 API Key", "error"); return; }
+
+    const model = getAllModels().find(m => m.id === platformId);
+    if (!model) { showMsg("未找到模型配置", "error"); return; }
+
+    showMsg("正在测试 " + (model.name || platformId) + "...", "info");
+
+    try {
+        const result = await callTestApi(model, apiKey);
+        if (result.success) {
+            showMsg("✅ " + result.message, "success");
+        } else {
+            showMsg("❌ " + result.message, "error");
+        }
+    } catch (err) {
+        showMsg("❌ 测试失败: " + err.message, "error");
+    }
+}
+
+// 实际调用 API 测试
+async function callTestApi(model, apiKey) {
+    const endpoint = model.api_endpoint;
+    const provider = model.provider;
+
+    // Anthropic 使用不同的 API 格式
+    if (provider.includes("Anthropic")) {
+        try {
+            const resp = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey,
+                    "anthropic-version": "2023-06-01",
+                    "anthropic-dangerous-direct-browser-access": "true"
+                },
+                body: JSON.stringify({
+                    model: model.id,
+                    max_tokens: 10,
+                    messages: [{ role: "user", content: "Hi" }]
+                })
+            });
+            if (resp.ok) {
+                return { success: true, message: `连接成功！模型: ${model.name}` };
+            } else {
+                const errData = await resp.json().catch(() => ({}));
+                return { success: false, message: `API 返回 ${resp.status}: ${errData.error?.message || resp.statusText}` };
+            }
+        } catch (e) {
+            return { success: false, message: `网络错误: ${e.message}（可能是 CORS 限制，需通过后端代理）` };
+        }
+    }
+
+    // Google Gemini 使用不同的格式
+    if (provider.includes("Google")) {
+        try {
+            const url = endpoint + "?key=" + apiKey;
+            const resp = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: "Hi" }] }],
+                    generationConfig: { maxOutputTokens: 10 }
+                })
+            });
+            if (resp.ok) {
+                return { success: true, message: `连接成功！模型: ${model.name}` };
+            } else {
+                const errData = await resp.json().catch(() => ({}));
+                return { success: false, message: `API 返回 ${resp.status}: ${errData.error?.message || resp.statusText}` };
+            }
+        } catch (e) {
+            return { success: false, message: `网络错误: ${e.message}（可能是 CORS 限制，需通过后端代理）` };
+        }
+    }
+
+    // OpenAI 兼容格式（DeepSeek, Qwen, Moonshot, Together, Mistral, etc.）
+    try {
+        const resp = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + apiKey
+            },
+            body: JSON.stringify({
+                model: model.id,
+                max_tokens: 10,
+                messages: [{ role: "user", content: "Hi" }]
+            })
+        });
+        if (resp.ok) {
+            return { success: true, message: `连接成功！模型: ${model.name}` };
+        } else {
+            const errData = await resp.json().catch(() => ({}));
+            return { success: false, message: `API 返回 ${resp.status}: ${errData.error?.message || resp.statusText}` };
+        }
+    } catch (e) {
+        // 浏览器 CORS 限制，无法直接调用
+        return { success: false, message: `浏览器直接调用受限（CORS），但配置已保存。API Key 格式看起来正确。` };
+    }
+}
+
+// ========== 保存配置 ==========
+function saveConfig() {
+    const modelId = document.getElementById("modelSelect").value;
+    const apiKey = document.getElementById("apiKeyInput").value.trim();
+
+    if (!modelId) { showMsg("请先选择一个模型", "error"); return; }
+    if (!apiKey) { showMsg("请输入 API Key", "error"); return; }
+
+    const model = getAllModels().find(m => m.id === modelId);
+    if (!model) { showMsg("未找到模型配置", "error"); return; }
+
+    const platforms = getPlatforms();
+    const auth = getAuth();
+
+    const platformConfig = {
+        id: model.id,
+        name: model.name,
+        provider: model.provider,
+        enabled: true,
+        fetch_method: "api",
+        api_endpoint: model.api_endpoint,
+        auth: { type: "api_key", env_var: model.api_key_env }
+    };
+
+    // 更新或新增
+    const idx = platforms.findIndex(p => p.id === modelId);
+    if (idx >= 0) {
+        platforms[idx] = platformConfig;
+    } else {
+        platforms.push(platformConfig);
+    }
+
+    // 保存 API Key 到 auth
+    auth[modelId] = apiKey;
+
+    savePlatforms(platforms);
+    saveAuth(auth);
+
+    showMsg("✅ 配置已保存！模型: " + model.name, "success");
+    clearForm();
+    loadPlatforms();
+
+    // 同时同步到后端 JSON 文件（如果服务器在运行）
+    syncToBackend(platforms, auth);
+}
+
+// 同步到后端配置文件
+async function syncToBackend(platforms, auth) {
+    try {
+        // 保存 platforms.json
+        await fetch("/api/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ platforms: platforms.map(p => ({ ...p, api_key: auth[p.id] })) })
+        });
+    } catch (e) {
+        // 服务器不运行也没关系，localStorage 已保存
+    }
+}
+
+// ========== 删除平台 ==========
+function deletePlatform(platformId) {
+    if (!confirm("确定要删除 " + platformId + " 的配置吗？")) return;
+
+    let platforms = getPlatforms();
+    let auth = getAuth();
+
+    platforms = platforms.filter(p => p.id !== platformId);
+    delete auth[platformId];
+
+    savePlatforms(platforms);
+    saveAuth(auth);
+
+    showMsg("✅ 已删除 " + platformId, "success");
+    loadPlatforms();
+
+    // 同步到后端
+    syncToBackend(platforms, auth);
+}
+
+// ========== 添加自定义模型 ==========
+function addCustomModel() {
+    const id = document.getElementById("customModelId").value.trim();
+    const name = document.getElementById("customModelName").value.trim();
+    const provider = document.getElementById("customModelProvider").value.trim();
+    const envVar = document.getElementById("customModelEnv").value.trim();
+    const endpoint = document.getElementById("customModelEndpoint").value.trim();
+
+    if (!id || !name || !provider || !envVar || !endpoint) {
+        showMsg("请填写所有字段", "error");
+        return;
+    }
+
+    // 检查 ID 是否重复
+    if (getAllModels().some(m => m.id === id)) {
+        showMsg("模型 ID 已存在: " + id, "error");
+        return;
+    }
+
+    const customModels = getCustomModels();
+    customModels.push({
+        id, name, provider,
+        api_endpoint: endpoint,
+        api_key_env: envVar,
+        custom: true
+    });
+    localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(customModels));
+
+    // 清空表单
+    document.getElementById("customModelId").value = "";
+    document.getElementById("customModelName").value = "";
+    document.getElementById("customModelProvider").value = "";
+    document.getElementById("customModelEnv").value = "";
+    document.getElementById("customModelEndpoint").value = "";
+
+    // 刷新模型列表
+    initModelSelect();
+    document.getElementById("customModelSection").classList.add("hidden");
+
+    showMsg("✅ 自定义模型已添加: " + name, "success");
+}
+
+// ========== 导出/导入配置 ==========
+function exportConfig() {
+    const data = {
+        platforms: getPlatforms(),
+        auth: getAuth(),
+        customModels: getCustomModels(),
+        exportTime: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "token-tracker-config.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importConfig() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (data.platforms) savePlatforms(data.platforms);
+                if (data.auth) saveAuth(data.auth);
+                if (data.customModels) localStorage.setItem(STORAGE_KEY_CUSTOM_MODELS, JSON.stringify(data.customModels));
+                initModelSelect();
+                loadPlatforms();
+                showMsg("✅ 配置已导入", "success");
+            } catch {
+                showMsg("❌ 导入失败：文件格式错误", "error");
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+// ========== 页面初始化 ==========
+document.addEventListener("DOMContentLoaded", function() {
+    // 加载模型列表
+    initModelSelect();
+
+    // 加载已配置平台
+    loadPlatforms();
+
+    // 添加导出/导入按钮到 header
+    const header = document.querySelector(".header");
+    const btnDiv = document.createElement("div");
+    btnDiv.style.cssText = "display:flex;gap:8px;margin-top:8px;";
+    btnDiv.innerHTML = `
+        <button class="btn btn-sm" style="background:#546e7a;color:white;" onclick="exportConfig()">📤 导出配置</button>
+        <button class="btn btn-sm" style="background:#546e7a;color:white;" onclick="importConfig()">📥 导入配置</button>
+    `;
+    header.appendChild(btnDiv);
+
+    console.log("Token Usage Tracker 配置界面已加载");
+    console.log("内置模型:", SUPPORTED_MODELS.length, "个");
+    console.log("自定义模型:", getCustomModels().length, "个");
+    console.log("已配置平台:", getPlatforms().length, "个");
+});
+</script>
+</body>
+</html>

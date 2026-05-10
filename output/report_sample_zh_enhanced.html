@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token 消耗报告（增强版）- 可選日期區間</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+
+        /* 日期选择器样式 */
+        .date-selector {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .date-selector .label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        .date-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .date-btn:hover { border-color: #667eea; color: #667eea; }
+        .date-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .date-custom {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 12px;
+        }
+        .date-custom input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .date-custom button {
+            padding: 6px 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card .label { font-size: 13px; color: #666; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+        .stat-card .sub { font-size: 12px; color: #999; margin-top: 4px; }
+        .stat-card .trend-up { color: #28a745; font-size: 14px; }
+        .stat-card .trend-down { color: #dc3545; font-size: 14px; }
+
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        .chart-box {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .chart-box h3 { font-size: 16px; margin-bottom: 16px; color: #333; }
+        .chart-box .chart { width: 100%; height: 300px; }
+
+        .comparison {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        .comparison h3 { font-size: 16px; margin-bottom: 16px; color: #333; }
+        .comparison .chart { width: 100%; height: 350px; }
+
+        .alerts {
+            padding: 30px;
+            background: #fff3cd;
+            border-top: 1px solid #ffc107;
+        }
+        .alerts h3 { color: #856404; margin-bottom: 12px; }
+        .alert-item {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .footer {
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            background: #f8f9fa;
+        }
+        @media (max-width: 768px) {
+            .charts { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📊 Token 消耗报告</h1>
+            <p id="reportRange">2026-05-04 ~ 2026-05-10 | 共 7 天</p>
+        </div>
+
+        <!-- 日期选择器 -->
+        <div class="date-selector">
+            <span class="label">📅 选择时间段：</span>
+            <button class="date-btn" data-days="1">今天</button>
+            <button class="date-btn" data-days="3">3天</button>
+            <button class="date-btn" data-days="7">7天</button>
+            <button class="date-btn active" data-days="30">30天</button>
+            <button class="date-btn" data-days="180">半年</button>
+            <button class="date-btn" data-days="365">1年</button>
+            <button class="date-btn" data-days="1095">3年</button>
+            <div class="date-custom">
+                <input type="date" id="startDate">
+                <span>至</span>
+                <input type="date" id="endDate">
+                <button onclick="applyCustomRange()">应用</button>
+            </div>
+        </div>
+
+        <!-- 汇总卡片 -->
+        <div class="summary">
+            <div class="stat-card">
+                <div class="label">时间段总消耗</div>
+                <div class="value">¥340.20</div>
+                <div class="sub">$47.25 USD</div>
+                <div class="trend-up">↑ 较上月 +12%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">日均消耗</div>
+                <div class="value">¥11.34</div>
+                <div class="sub">$1.57 USD/天</div>
+                <div class="trend-down">↓ 较上月 -3%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">本月预算执行</div>
+                <div class="value">68%</div>
+                <div class="sub">¥340.20 / ¥500.00</div>
+                <div class="trend-up">预计月末 ¥450</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">异常天数</div>
+                <div class="value" style="color: #ffc107;">3天</div>
+                <div class="sub">消耗超过 ¥15/天</div>
+                <div class="trend-down">↓ 较上月少 2天</div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="charts">
+            <!-- 每日消耗趋势 -->
+            <div class="chart-box">
+                <h3>📈 每日消耗趋势</h3>
+                <div id="trendChart" class="chart"></div>
+            </div>
+
+            <!-- 平台消耗分布 -->
+            <div class="chart-box">
+                <h3>🍩 平台消耗占比</h3>
+                <div id="pieChart" class="chart"></div>
+            </div>
+
+            <!-- 平台对比柱状图 -->
+            <div class="chart-box">
+                <h3>🔷 各平台 Token 消耗</h3>
+                <div id="barChart" class="chart"></div>
+            </div>
+
+            <!-- 消耗排行榜 -->
+            <div class="chart-box">
+                <h3>🏆 消耗排行榜（按天）</h3>
+                <div id="rankChart" class="chart"></div>
+            </div>
+        </div>
+
+        <!-- 对比分析 -->
+        <div class="comparison">
+            <h3>📊 时间段对比（本期 vs 上期）</h3>
+            <div id="compareChart" class="chart"></div>
+        </div>
+
+        <!-- 异常告警 -->
+        <div class="alerts">
+            <h3>⚠️ 异常告警</h3>
+            <div class="alert-item">
+                <strong>DeepSeek 05-09 消耗异常</strong><br>
+                <span style="color: #666; font-size: 13px;">单日消耗 ¥9.80，超过日均 85%，建议检查是否有大任务运行</span>
+            </div>
+            <div class="alert-item">
+                <strong>腾讯云 TokenHub 连续3天增长</strong><br>
+                <span style="color: #666; font-size: 13px;">05-08 ~ 05-10 持续增长，累计增长 32%</span>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            生成时间 / Generated: 2026-05-10 12:03:00 | Token Usage Tracker v1.0 | 数据来源: Tencent Cloud TokenHub, DeepSeek
+        </div>
+    </div>
+
+    <script>
+        // 模拟数据（不同时间段的）
+        const mockData = {
+            1: { // 今天
+                dates: ['05-10'],
+                costs: [12.5],
+                total: 12.5,
+                avg: 12.5,
+                platforms: [{name: '腾讯云 TokenHub', value: 8.2}, {name: 'DeepSeek', value: 4.3}]
+            },
+            3: { // 3天
+                dates: ['05-08', '05-09', '05-10'],
+                costs: [10.8, 14.2, 12.5],
+                total: 37.5,
+                avg: 12.5,
+                platforms: [{name: '腾讯云 TokenHub', value: 22.3}, {name: 'DeepSeek', value: 15.2}]
+            },
+            7: { // 7天
+                dates: ['05-04', '05-05', '05-06', '05-07', '05-08', '05-09', '05-10'],
+                costs: [9.5, 10.2, 8.8, 11.5, 10.8, 14.2, 12.5],
+                total: 77.5,
+                avg: 11.1,
+                platforms: [{name: '腾讯云 TokenHub', value: 45.2}, {name: 'DeepSeek', value: 32.3}]
+            },
+            30: { // 30天
+                dates: ['04-11', '04-15', '04-20', '04-25', '04-30', '05-05', '05-10'],
+                costs: [8.5, 9.2, 10.5, 11.8, 12.0, 10.2, 12.5],
+                total: 340.2,
+                avg: 11.3,
+                platforms: [{name: '腾讯云 TokenHub', value: 198.5}, {name: 'DeepSeek', value: 141.7}]
+            },
+            180: { // 半年
+                dates: ['2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
+                costs: [280, 310, 295, 320, 338, 340, 340],
+                total: 1923.0,
+                avg: 10.6,
+                platforms: [{name: '腾讯云 TokenHub', value: 1120}, {name: 'DeepSeek', value: 803}]
+            },
+            365: { // 1年
+                dates: ['2025-05', '2025-07', '2025-09', '2025-11', '2026-01', '2026-03', '2026-05'],
+                costs: [280, 295, 310, 320, 338, 350, 340],
+                total: 3895.0,
+                avg: 10.7,
+                platforms: [{name: '腾讯云 TokenHub', value: 2250}, {name: 'DeepSeek', value: 1645}]
+            },
+            1095: { // 3年
+                dates: ['2023', '2024', '2025', '2026'],
+                costs: [2100, 3200, 3895, 3400],
+                total: 12595.0,
+                avg: 11.5,
+                platforms: [{name: '腾讯云 TokenHub', value: 7200}, {name: 'DeepSeek', value: 5395}]
+            }
+        };
+
+        let currentDays = 30; // 默认30天
+
+        // 初始化所有图表
+        function initCharts(days) {
+            const data = mockData[days] || mockData[30];
+            
+            // 更新报告时间范围显示
+            document.getElementById('reportRange').textContent = 
+                `共 ${days === 1 ? '1天' : days < 365 ? days + '天' : (days/365).toFixed(1) + '年'} | 总消耗 ¥${data.total.toFixed(2)}`;
+
+            // 1. 趋势图
+            const trendChart = echarts.init(document.getElementById('trendChart'));
+            trendChart.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: data.dates },
+                yAxis: { type: 'value', name: '消耗 (¥)' },
+                series: [{
+                    data: data.costs,
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: { color: 'rgba(102,126,234,0.2)' },
+                    lineStyle: { color: '#667eea', width: 3 },
+                    itemStyle: { color: '#667eea' }
+                }]
+            });
+
+            // 2. 饼图
+            const pieChart = echarts.init(document.getElementById('pieChart'));
+            pieChart.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+                legend: { bottom: 0, textStyle: { fontSize: 12 } },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: true, formatter: '{b}\n¥{c}' },
+                    data: data.platforms.map((p, i) => ({
+                        value: p.value,
+                        name: p.name,
+                        itemStyle: { color: i === 0 ? '#667eea' : '#764ba2' }
+                    }))
+                }]
+            });
+
+            // 3. 柱状图
+            const barChart = echarts.init(document.getElementById('barChart'));
+            barChart.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: data.platforms.map(p => p.name) },
+                yAxis: { type: 'value', name: '消耗 (¥)' },
+                series: [{
+                    data: data.platforms.map(p => p.value),
+                    type: 'bar',
+                    itemStyle: { 
+                        color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
+                            { offset: 0, color: '#667eea' },
+                            { offset: 1, color: '#764ba2' }
+                        ]},
+                        borderRadius: [6, 6, 0, 0]
+                    }
+                }]
+            });
+
+            // 4. 排行榜（横向柱状图）
+            const rankChart = echarts.init(document.getElementById('rankChart'));
+            const sortedDays = data.costs.map((c, i) => ({date: data.dates[i], cost: c}))
+                .sort((a, b) => b.cost - a.cost).slice(0, 5);
+            rankChart.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'value', name: '消耗 (¥)' },
+                yAxis: { type: 'category', data: sortedDays.map(d => d.date).reverse() },
+                series: [{
+                    data: sortedDays.map(d => d.cost).reverse(),
+                    type: 'bar',
+                    itemStyle: { 
+                        color: '#667eea',
+                        borderRadius: [0, 6, 6, 0]
+                    }
+                }]
+            });
+
+            // 5. 对比图（本期 vs 上期）
+            const compareChart = echarts.init(document.getElementById('compareChart'));
+            const half = Math.ceil(data.costs.length / 2);
+            const currentPeriod = data.costs.slice(half);
+            const previousPeriod = data.costs.slice(0, half);
+            compareChart.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['本期', '上期'] },
+                xAxis: { type: 'category', data: currentPeriod.map((_, i) => '第' + (i+1) + '天') },
+                yAxis: { type: 'value', name: '消耗 (¥)' },
+                series: [
+                    {
+                        name: '本期',
+                        type: 'bar',
+                        data: currentPeriod,
+                        itemStyle: { color: '#667eea' }
+                    },
+                    {
+                        name: '上期',
+                        type: 'bar',
+                        data: previousPeriod.length ? previousPeriod : currentPeriod.map(c => c * 0.9),
+                        itemStyle: { color: '#ccc' }
+                    }
+                ]
+            });
+
+            // 响应式
+            window.addEventListener('resize', () => {
+                trendChart.resize();
+                pieChart.resize();
+                barChart.resize();
+                rankChart.resize();
+                compareChart.resize();
+            });
+        }
+
+        // 日期按钮点击事件
+        document.querySelectorAll('.date-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentDays = parseInt(this.dataset.days);
+                initCharts(currentDays);
+            });
+        });
+
+        // 自定义日期范围
+        function applyCustomRange() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (start && end) {
+                alert('自定义范围: ' + start + ' 至 ' + end + '\n（演示模式，实际使用时会从数据库读取该范围数据）');
+                // 实际使用时，这里应该发请求获取该日期范围的数据，然后调用 initCharts()
+            } else {
+                alert('请先选择开始和结束日期！');
+            }
+        }
+
+        // 页面加载时初始化
+        initCharts(currentDays);
+    </script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token 消耗报告 - 多平台适配版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f0f2f5;
+            padding: 12px;
+            color: #333;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        /* 顶部栏：响应式 */
+        .header-bar {
+            background: linear-gradient(135deg, #8fa3d0 0%, #b8a9c9 100%);
+            color: white;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header-left h1 { font-size: 18px; font-weight: 600; }
+        .header-left .subtitle { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+        .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        
+        /* 语言切换 */
+        .lang-toggle {
+            padding: 4px 10px;
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        .lang-toggle:hover { background: rgba(255,255,255,0.25); }
+
+        /* 日期按钮 */
+        .date-btn {
+            padding: 4px 10px;
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .date-btn:hover { background: rgba(255,255,255,0.25); }
+        .date-btn.active { background: white; color: #667eea; border-color: white; }
+        
+        .date-custom { display: flex; align-items: center; gap: 4px; }
+        .date-custom input {
+            padding: 3px 6px;
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 4px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 11px;
+            width: 100px;
+        }
+        .date-custom button {
+            padding: 3px 8px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        /* 汇总卡片 - 响应式 */
+        .summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 14px 20px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 140px;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .stat-card .label { font-size: 11px; color: #999; margin-bottom: 4px; }
+        .stat-card .value { font-size: 20px; font-weight: 600; color: #7b8bb3; }
+        .stat-card .sub { font-size: 11px; color: #999; margin-top: 2px; }
+
+        /* 平台标签 - 可横向滚动 */
+        .platform-tags {
+            display: flex;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .platform-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            background: white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            font-size: 12px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .platform-tag.active { box-shadow: 0 2px 8px rgba(102,126,234,0.3); }
+        .platform-tag .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* 图表 */
+        .main-chart {
+            padding: 14px 20px;
+        }
+        .chart-box {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .chart-box h3 { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 12px; }
+        .chart-box .chart { width: 100%; height: 280px; }
+
+        /* 两列图表 */
+        .charts-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 0 20px 14px;
+        }
+        @media (max-width: 768px) {
+            .charts-2col { grid-template-columns: 1fr; }
+            .header-bar { padding: 12px 14px; }
+            .date-btn { padding: 3px 8px; font-size: 10px; }
+            .stat-card { min-width: 120px; }
+        }
+
+        /* 告警 */
+        .alerts { padding: 0 20px 14px; }
+        .alert-item {
+            background: #fff3cd;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border-left: 3px solid #ffc107;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .alert-item strong { color: #856404; }
+
+        .footer {
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部：标题 + 语言 + 日期 -->
+        <div class="header-bar">
+            <div class="header-left">
+                <h1 id="title">📊 Token 消耗报告</h1>
+                <div class="subtitle" id="reportRange">2026-04-11 ~ 2026-05-10 | 共 30 天</div>
+            </div>
+            <div class="header-right">
+                <button class="lang-toggle" onclick="toggleLang()">EN / 中</button>
+                <button class="date-btn" data-days="1">今天</button>
+                <button class="date-btn" data-days="3">3天</button>
+                <button class="date-btn" data-days="7">7天</button>
+                <button class="date-btn active" data-days="30">30天</button>
+                <button class="date-btn" data-days="180">半年</button>
+                <button class="date-btn" data-days="365">1年</button>
+                <div class="date-custom">
+                    <input type="date" id="startDate">
+                    <span style="color:rgba(255,255,255,0.7);font-size:11px;">~</span>
+                    <input type="date" id="endDate">
+                    <button onclick="applyCustomRange()">应用</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 汇总卡片（动态生成） -->
+        <div class="summary" id="summaryCards"></div>
+
+        <!-- 平台标签（可横向滚动，动态生成） -->
+        <div class="platform-tags" id="platformTags"></div>
+
+        <!-- 主趋势图 -->
+        <div class="main-chart">
+            <div class="chart-box">
+                <h3 id="trendTitle">📈 各平台消耗趋势</h3>
+                <div id="trendChart" class="chart"></div>
+            </div>
+        </div>
+
+        <!-- 双图并排 -->
+        <div class="charts-2col">
+            <div class="chart-box">
+                <h3 id="pieTitle">🥧 平台消耗占比</h3>
+                <div id="pieChart" class="chart"></div>
+            </div>
+            <div class="chart-box">
+                <h3 id="stackTitle">📊 平台占比变化趋势</h3>
+                <div id="stackChart" class="chart"></div>
+            </div>
+        </div>
+
+        <!-- 告警 -->
+        <div class="alerts" id="alertsSection"></div>
+
+        <!-- 页脚 -->
+        <div class="footer" id="footerText">
+            生成时间: 2026-05-10 12:21 | Token Usage Tracker v1.0
+        </div>
+    </div>
+
+    <script>
+        // 多平台模拟数据（可扩展）
+        const platformConfig = [
+            { id: 'tencent', name: '腾讯云', nameEn: 'Tencent', color: '#8fa3d0' },
+            { id: 'deepseek', name: 'DeepSeek', nameEn: 'DeepSeek', color: '#b8a9c9' },
+            { id: 'openai', name: 'OpenAI', nameEn: 'OpenAI', color: '#a8c8a0' },
+            { id: 'anthropic', name: 'Anthropic', nameEn: 'Anthropic', color: '#d4a0a0' },
+            { id: 'gemini', name: 'Gemini', nameEn: 'Gemini', color: '#e0c080' }
+        ];
+
+        // 按时间段的模拟数据（5个平台）
+        function generateMockData(days) {
+            const base = {
+                1:  { dates: ['05-10'], len: 1 },
+                3:  { dates: ['05-08','05-09','05-10'], len: 3 },
+                7:  { dates: ['05-04','05-05','05-06','05-07','05-08','05-09','05-10'], len: 7 },
+                30: { dates: ['04-11','04-15','04-20','04-25','04-30','05-05','05-10'], len: 7 },
+                180:{ dates: ['2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'], len: 7 },
+                365:{ dates: ['2025-Q2','2025-Q3','2025-Q4','2026-Q1','2026-Q2'], len: 5 },
+                1095:{ dates: ['2023','2024','2025','2026'], len: 4 }
+            }[days] || { dates: ['04-11','05-10'], len: 2 };
+
+            const data = { dates: base.dates, platforms: {} };
+            platformConfig.forEach((p, idx) => {
+                const baseVal = [8.2, 4.3, 6.1, 3.8, 2.5][idx] || 3.0;
+                data.platforms[p.id] = base.dates.map((_, i) => 
+                    +(baseVal * (0.8 + Math.random() * 0.4) * (1 + i * 0.05)).toFixed(2)
+                );
+            });
+            // 计算汇总
+            data.total = 0;
+            data.platformTotals = {};
+            platformConfig.forEach(p => {
+                data.platformTotals[p.id] = data.platforms[p.id].reduce((a, b) => a + b, 0);
+                data.total += data.platformTotals[p.id];
+            });
+            return data;
+        }
+
+        let currentDays = 30;
+        let currentLang = 'zh';
+        let charts = {};
+        let currentData = null;
+
+        const text = {
+            zh: {
+                title: '📊 Token 消耗报告',
+                trendTitle: '📈 各平台消耗趋势',
+                pieTitle: '🥧 平台消耗占比',
+                stackTitle: '📊 平台占比变化趋势',
+                totalLabel: '总消耗',
+                avgLabel: '日均消耗',
+                alerts: [{ title: '⚠️ 异常告警', items: ['DeepSeek 05-09 消耗异常，单日 ¥9.80，超过日均 85%'] }],
+                footer: '生成时间: 2026-05-10 12:21 | Token Usage Tracker v1.0'
+            },
+            en: {
+                title: '📊 Token Usage Report',
+                trendTitle: '📈 Platform Usage Trends',
+                pieTitle: '🥧 Platform Usage Share',
+                stackTitle: '📊 Platform Share Over Time',
+                totalLabel: 'Total Cost',
+                avgLabel: 'Daily Avg',
+                alerts: [{ title: '⚠️ Alerts', items: ['DeepSeek abnormal usage on 05-09: ¥9.80, 85% above daily avg'] }],
+                footer: 'Generated: 2026-05-10 12:21 | Token Usage Tracker v1.0'
+            }
+        };
+
+        function renderSummaryCards(data) {
+            const daysCount = data.dates.length;
+            const avg = data.total / daysCount;
+            let html = `
+                <div class="stat-card">
+                    <div class="label">${text[currentLang].totalLabel}</div>
+                    <div class="value">¥${data.total.toFixed(2)}</div>
+                    <div class="sub">$${(data.total / 7.2).toFixed(2)} USD</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">${text[currentLang].avgLabel}</div>
+                    <div class="value">¥${avg.toFixed(2)}</div>
+                    <div class="sub">$${(avg / 7.2).toFixed(2)} / day</div>
+                </div>
+            `;
+            // 每个平台一张卡片（最多显示5个，超出可滚动）
+            platformConfig.forEach(p => {
+                const pTotal = data.platformTotals[p.id] || 0;
+                const pct = ((pTotal / data.total) * 100).toFixed(1);
+                html += `
+                    <div class="stat-card">
+                        <div class="label">${currentLang === 'zh' ? p.name : p.nameEn}</div>
+                        <div class="value" style="color:${p.color};">¥${pTotal.toFixed(2)}</div>
+                        <div class="sub">占比 ${pct}%</div>
+                    </div>
+                `;
+            });
+            document.getElementById('summaryCards').innerHTML = html;
+        }
+
+        function renderPlatformTags() {
+            let html = '';
+            platformConfig.forEach((p, idx) => {
+                html += `
+                    <div class="platform-tag ${idx < 2 ? 'active' : ''}" data-idx="${idx}" onclick="togglePlatform(${idx})">
+                        <span class="dot" style="background:${p.color};"></span>
+                        ${currentLang === 'zh' ? p.name : p.nameEn}
+                    </div>
+                `;
+            });
+            document.getElementById('platformTags').innerHTML = html;
+        }
+
+        function togglePlatform(idx) {
+            const tag = document.querySelectorAll('.platform-tag')[idx];
+            tag.classList.toggle('active');
+            // 更新图表显示/隐藏该平台
+            // （实际应更新 ECharts series 的 show 属性）
+            alert(`切换平台显示: ${platformConfig[idx][currentLang === 'zh' ? 'name' : 'nameEn']}`);
+        }
+
+        function initCharts(days) {
+            currentData = generateMockData(days);
+            const data = currentData;
+            const daysCount = data.dates.length;
+
+            // 更新文字
+            document.getElementById('reportRange').textContent = 
+                `${data.dates[0]} ~ ${data.dates[daysCount-1]} | 共 ${daysCount} 天`;
+
+            renderSummaryCards(data);
+            renderPlatformTags();
+
+            // 1. 主趋势图（多平台分层）
+            charts.trend = echarts.init(document.getElementById('trendChart'));
+            const series = platformConfig.map(p => ({
+                name: currentLang === 'zh' ? p.name : p.nameEn,
+                type: 'line',
+                data: data.platforms[p.id] || [],
+                smooth: true,
+                lineStyle: { color: p.color, width: 2 },
+                itemStyle: { color: p.color },
+                areaStyle: { color: p.color.replace(')', ',0.08)').replace('rgb', 'rgba') }
+            }));
+            charts.trend.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: platformConfig.map(p => currentLang === 'zh' ? p.name : p.nameEn), top: 0, textStyle: { fontSize: 11 } },
+                grid: { left: 60, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: data.dates, axisLabel: { fontSize: 11 } },
+                yAxis: { type: 'value', name: currentLang === 'zh' ? '消耗 (¥)' : 'Cost (¥)', nameTextStyle: { fontSize: 11 }, axisLabel: { fontSize: 11 } },
+                series: series
+            });
+
+            // 2. 饼图
+            charts.pie = echarts.init(document.getElementById('pieChart'));
+            charts.pie.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+                legend: { bottom: 0, textStyle: { fontSize: 10 } },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: true, formatter: '{b}\n¥{c}', fontSize: 10 },
+                    data: platformConfig.map(p => ({
+                        value: data.platformTotals[p.id] || 0,
+                        name: currentLang === 'zh' ? p.name : p.nameEn,
+                        itemStyle: { color: p.color }
+                    }))
+                }]
+            });
+
+            // 3. 堆叠面积图
+            charts.stack = echarts.init(document.getElementById('stackChart'));
+            charts.stack.setOption({
+                tooltip: { trigger: 'axis' },
+                legend: { data: platformConfig.map(p => currentLang === 'zh' ? p.name : p.nameEn), top: 0, textStyle: { fontSize: 11 } },
+                grid: { left: 60, right: 20, top: 40, bottom: 30 },
+                xAxis: { type: 'category', data: data.dates, axisLabel: { fontSize: 11 } },
+                yAxis: { type: 'value', name: currentLang === 'zh' ? '消耗 (¥)' : 'Cost (¥)', nameTextStyle: { fontSize: 11 }, axisLabel: { fontSize: 11 } },
+                series: platformConfig.map(p => ({
+                    name: currentLang === 'zh' ? p.name : p.nameEn,
+                    type: 'line',
+                    stack: 'Total',
+                    areaStyle: { color: p.color.replace(')', ',0.3)').replace('rgb', 'rgba') },
+                    lineStyle: { color: p.color, width: 1.5 },
+                    itemStyle: { color: p.color },
+                    data: data.platforms[p.id] || []
+                }))
+            });
+
+            window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            const t = text[currentLang];
+            document.getElementById('title').textContent = t.title;
+            document.getElementById('trendTitle').textContent = t.trendTitle;
+            document.getElementById('pieTitle').textContent = t.pieTitle;
+            document.getElementById('stackTitle').textContent = t.stackTitle;
+            document.getElementById('footerText').textContent = t.footer;
+            // 重新渲染图表（更新 legend 文字）
+            initCharts(currentDays);
+        }
+
+        function applyCustomRange() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (start && end) {
+                alert((currentLang === 'zh' ? '自定义范围: ' : 'Custom range: ') + start + ' ~ ' + end);
+            } else {
+                alert(currentLang === 'zh' ? '请选择开始和结束日期！' : 'Please select start and end dates!');
+            }
+        }
+
+        // 日期按钮
+        document.querySelectorAll('.date-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentDays = parseInt(this.dataset.days);
+                initCharts(currentDays);
+            });
+        });
+
+        // 初始化
+        initCharts(currentDays);
+    </script>
+</body>
+</html>

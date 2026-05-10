@@ -1,0 +1,16 @@
+{
+  "platforms": [
+    {
+      "id": "deepseek-chat",
+      "name": "DeepSeek Chat",
+      "provider": "DeepSeek 深度求索",
+      "enabled": true,
+      "fetch_method": "api",
+      "api_endpoint": "https://api.deepseek.com/v1/chat/completions",
+      "auth": {
+        "type": "api_key",
+        "env_var": "DEEPSEEK_API_KEY"
+      }
+    }
+  ]
+}

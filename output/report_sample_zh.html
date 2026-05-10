@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token 消耗日报 - 2026-05-10</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-card .label { font-size: 13px; color: #666; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+        .stat-card .sub { font-size: 12px; color: #999; margin-top: 4px; }
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        .chart-box {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .chart-box h3 {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        .chart-box .chart { width: 100%; height: 300px; }
+        .alerts {
+            padding: 30px;
+            background: #fff3cd;
+            border-top: 1px solid #ffc107;
+        }
+        .alerts h3 { color: #856404; margin-bottom: 12px; }
+        .alert-item {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        .footer {
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            background: #f8f9fa;
+        }
+        @media (max-width: 768px) {
+            .charts { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📊 Token 消耗日报</h1>
+            <p>2026-05-10 | 数据来源: Tencent Cloud TokenHub, DeepSeek</p>
+        </div>
+
+        <!-- 汇总卡片 -->
+        <div class="summary">
+            <div class="stat-card">
+                <div class="label">今日总消耗</div>
+                <div class="value">¥12.50</div>
+                <div class="sub">$1.74 USD</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">昨日对比</div>
+                <div class="value" style="color: #28a745;">↑ 15%</div>
+                <div class="sub">增长 ¥1.63</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">本月累计</div>
+                <div class="value">¥340.20</div>
+                <div class="sub">预算执行 68%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">预测月末</div>
+                <div class="value">¥450.00</div>
+                <div class="sub">剩余预算 ¥160</div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="charts">
+            <!-- 平台消耗分布饼图 -->
+            <div class="chart-box">
+                <h3>📊 平台消耗分布</h3>
+                <div id="pieChart" class="chart"></div>
+            </div>
+
+            <!-- 本月每日趋势折线图 -->
+            <div class="chart-box">
+                <h3>📈 本月消耗趋势</h3>
+                <div id="lineChart" class="chart"></div>
+            </div>
+
+            <!-- 平台对比柱状图 -->
+            <div class="chart-box">
+                <h3>🔷 平台 Token 消耗对比</h3>
+                <div id="barChart" class="chart"></div>
+            </div>
+
+            <!-- 预算执行进度 -->
+            <div class="chart-box">
+                <h3>🎯 预算执行进度</h3>
+                <div id="gaugeChart" class="chart"></div>
+            </div>
+        </div>
+
+        <!-- 异常告警 -->
+        <div class="alerts">
+            <h3>⚠️ 异常告警</h3>
+            <div class="alert-item">
+                <strong>DeepSeek 消耗异常增长</strong><br>
+                <span style="color: #666; font-size: 13px;">今日消耗 ¥4.30，较昨日增长 25%，超过设定阈值 20%</span>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            生成时间 / Generated: 2026-05-10 11:52:00 | Token Usage Tracker v1.0
+        </div>
+    </div>
+
+    <script>
+        // 1. 饼图 - 平台消耗分布
+        const pieChart = echarts.init(document.getElementById('pieChart'));
+        pieChart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+            legend: { bottom: 0, textStyle: { fontSize: 12 } },
+            series: [{
+                type: 'pie',
+                radius: ['40%', '70%'],
+                avoidLabelOverlap: false,
+                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                label: { show: true, formatter: '{b}\n¥{c}' },
+                data: [
+                    { value: 8.20, name: '腾讯云 TokenHub', itemStyle: { color: '#667eea' } },
+                    { value: 4.30, name: 'DeepSeek', itemStyle: { color: '#764ba2' } }
+                ]
+            }]
+        });
+
+        // 2. 折线图 - 本月消耗趋势
+        const lineChart = echarts.init(document.getElementById('lineChart'));
+        lineChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: {
+                type: 'category',
+                data: ['05-01', '05-03', '05-05', '05-07', '05-09', '05-10']
+            },
+            yAxis: { type: 'value', name: '消耗 (¥)' },
+            series: [{
+                data: [8.5, 10.2, 9.8, 11.5, 10.8, 12.5],
+                type: 'line',
+                smooth: true,
+                areaStyle: { color: 'rgba(102,126,234,0.2)' },
+                lineStyle: { color: '#667eea', width: 3 },
+                itemStyle: { color: '#667eea' }
+            }]
+        });
+
+        // 3. 柱状图 - 平台对比
+        const barChart = echarts.init(document.getElementById('barChart'));
+        barChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['Tokens', '消耗 (¥)'] },
+            xAxis: { type: 'category', data: ['腾讯云 TokenHub', 'DeepSeek'] },
+            yAxis: [
+                { type: 'value', name: 'Tokens' },
+                { type: 'value', name: '消耗 (¥)' }
+            ],
+            series: [
+                {
+                    name: 'Tokens',
+                    type: 'bar',
+                    data: [15230, 12100],
+                    itemStyle: { color: '#667eea', borderRadius: [6, 6, 0, 0] }
+                },
+                {
+                    name: '消耗 (¥)',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: [8.20, 4.30],
+                    itemStyle: { color: '#764ba2' }
+                }
+            ]
+        });
+
+        // 4. 仪表盘 - 预算执行进度
+        const gaugeChart = echarts.init(document.getElementById('gaugeChart'));
+        gaugeChart.setOption({
+            tooltip: { formatter: '预算执行率: 68%' },
+            series: [{
+                type: 'gauge',
+                progress: { show: true, width: 18 },
+                axisLine: { lineStyle: { width: 18 } },
+                axisTick: { show: false },
+                splitLine: { show: false },
+                axisLabel: { show: false },
+                detail: {
+                    valueAnimation: true,
+                    fontSize: 32,
+                    fontWeight: 'bold',
+                    formatter: '68%'
+                },
+                data: [{ value: 68, name: '预算执行率' }]
+            }]
+        });
+
+        // 响应式调整
+        window.addEventListener('resize', () => {
+            pieChart.resize();
+            lineChart.resize();
+            barChart.resize();
+            gaugeChart.resize();
+        });
+    </script>
+</body>
+</html>
