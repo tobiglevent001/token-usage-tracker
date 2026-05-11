@@ -9,79 +9,168 @@ Test token usage data fetching functionality
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 import json
-import os, sys
+import os
+import sys
 from pathlib import Path
 
-# 添加 scripts 目录到路径 / Add scripts directory to path
+# 添加 scripts 目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from fetch_usage import TokenUsageFetcher
+from fetch_usage import BalanceFetcher
 
-class TestTokenUsageFetcher(unittest.TestCase):
-    """测试 Token 消耗数据抓取器 / Test Token Usage Fetcher"""
-    
+
+class TestBalanceFetcher(unittest.TestCase):
+    """测试 Balance Fetcher / Test Balance Fetcher"""
+
     def setUp(self):
-        """测试前准备 / Setup before tests"""
-        self.mock_config = {
-            "platforms": [
-                {
-                    "id": "test-platform",
-                    "name": "测试平台",
-                    "name_en": "Test Platform",
-                    "enabled": True,
-                    "fetch_method": "api",
-                    "api_endpoint": "https://api.test.com/v1/usage",
-                    "auth": {
-                        "type": "api_key",
-                        "env_var": "TEST_API_KEY"
-                    }
-                }
-            ],
-            "settings": {
-                "retry_failed": 3,
-                "retry_delay_seconds": 5
-            }
+        """测试前准备"""
+        self.mock_auth = {
+            "deepseek": "sk-test-deepseek-key",
+            "moonshot": "sk-test-moonshot-key"
         }
-    
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
     @patch('fetch_usage.requests.get')
-    @patch('fetch_usage.os.getenv')
-    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data=json.dumps({"platforms": [{"id": "test", "name": "Test", "name_en": "Test", "enabled": True, "fetch_method": "api", "api_endpoint": "https://api.test.com", "auth": {"type": "api_key", "env_var": "TEST"}}]))
-    def test_fetch_via_api_success(self, mock_open, mock_getenv, mock_get):
-        """测试通过 API 成功抓取数据 / Test successful data fetch via API"""
-        # 模拟 API Key / Mock API key
-        mock_getenv.return_value = "test-api-key"
-        
-        # 模拟 API 响应 / Mock API response
+    def test_fetch_deepseek_success(self, mock_get, mock_load_auth):
+        """测试 DeepSeek 余额查询成功"""
+        mock_load_auth.return_value = self.mock_auth
+
         mock_response = Mock()
-        mock_response.raise_for_status = Mock()
+        mock_response.status_code = 200
         mock_response.json.return_value = {
-            "total_tokens": 10000,
-            "cost": 5.50,
-            "requests": 50
+            "is_available": True,
+            "balance_infos": [
+                {
+                    "currency": "CNY",
+                    "total_balance": "110.00",
+                    "granted_balance": "10.00",
+                    "topped_up_balance": "100.00"
+                }
+            ]
         }
         mock_get.return_value = mock_response
-        
-        # 注意：这个测试需要完整实现 / Note: This test needs full implementation
-        # 目前只是示例 / Currently just an example
-        self.assertTrue(True)  # 占位 / Placeholder
-    
-    def test_missing_api_key(self):
-        """测试缺少 API Key 的情况 / Test missing API key"""
-        with patch('os.getenv', return_value=None):
-            with self.assertRaises(ValueError):
-                fetcher = TokenUsageFetcher()
-                # 这里应该触发 ValueError / This should raise ValueError
-    
-    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data=json.dumps({"platforms": []}))
-    def test_fetch_all_no_platforms(self, mock_open):
-        """测试没有启用平台的情况 / Test no enabled platforms"""
-        fetcher = TokenUsageFetcher()
-        results = fetcher.fetch_all()
+
+        fetcher = BalanceFetcher()
+        result = fetcher._fetch_platform("deepseek", fetcher.BALANCE_APIS["deepseek"])
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["balance"], 110.00)
+        self.assertEqual(result["granted_balance"], 10.00)
+        self.assertEqual(result["topped_up_balance"], 100.00)
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
+    @patch('fetch_usage.requests.get')
+    def test_fetch_moonshot_success(self, mock_get, mock_load_auth):
+        """测试 Kimi/Moonshot 余额查询成功"""
+        mock_load_auth.return_value = self.mock_auth
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "code": 0,
+            "scode": "0x0",
+            "status": True,
+            "data": {
+                "available_balance": 49.58894,
+                "voucher_balance": 46.58893,
+                "cash_balance": 3.00001
+            }
+        }
+        mock_get.return_value = mock_response
+
+        fetcher = BalanceFetcher()
+        result = fetcher._fetch_platform("moonshot", fetcher.BALANCE_APIS["moonshot"])
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["balance"], 49.58894)
+        self.assertEqual(result["voucher_balance"], 46.58893)
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
+    def test_fetch_without_api_key(self, mock_load_auth):
+        """测试缺少 API Key 时报错"""
+        mock_load_auth.return_value = {}
+
+        fetcher = BalanceFetcher()
+        results = fetcher.fetch_all(platforms=["deepseek"])
+
+        self.assertEqual(len(results), 1)
+        self.assertFalse(results[0]["success"])
+        self.assertIn("API Key", results[0].get("error", ""))
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
+    def test_fetch_all_no_platforms(self, mock_load_auth):
+        """测试空平台列表"""
+        mock_load_auth.return_value = self.mock_auth
+        fetcher = BalanceFetcher()
+        results = fetcher.fetch_all(platforms=[])
         self.assertEqual(len(results), 0)
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
+    @patch('fetch_usage.requests.get')
+    def test_fetch_openai_usage(self, mock_get, mock_load_auth):
+        """测试 OpenAI 用量查询"""
+        mock_load_auth.return_value = {"openai_usage": "sk-admin-test-key"}
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "data": [
+                {
+                    "object": "bucket",
+                    "start_time": 1736616660,
+                    "end_time": 1736640000,
+                    "results": [
+                        {
+                            "input_tokens": 141201,
+                            "output_tokens": 9756,
+                            "num_model_requests": 470
+                        }
+                    ]
+                }
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        fetcher = BalanceFetcher()
+        result = fetcher._fetch_platform("openai_usage", fetcher.BALANCE_APIS["openai_usage"])
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["input_tokens"], 141201)
+        self.assertEqual(result["output_tokens"], 9756)
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
+    @patch('fetch_usage.requests.get')
+    def test_api_error_handling(self, mock_get, mock_load_auth):
+        """测试 API 错误返回处理"""
+        mock_load_auth.return_value = self.mock_auth
+
+        mock_response = Mock()
+        mock_response.status_code = 401
+        mock_response.text = '{"error": "invalid_api_key"}'
+        mock_get.return_value = mock_response
+
+        fetcher = BalanceFetcher()
+        result = fetcher.fetch_all(platforms=["deepseek"])
+
+        self.assertFalse(result[0]["success"])
+
+
+class TestSaveResults(unittest.TestCase):
+    """测试结果保存功能"""
+
+    @patch('fetch_usage.BalanceFetcher._load_auth')
+    @patch('fetch_usage.json.dump')
+    @patch('fetch_usage.open', new_callable=unittest.mock.mock_open)
+    def test_save_results(self, mock_file, mock_dump, mock_load_auth):
+        """测试保存结果到 JSON"""
+        mock_load_auth.return_value = {"deepseek": "sk-test"}
+
+        fetcher = BalanceFetcher()
+        # 模拟保存空结果
+        fetcher.results = [{"test": "data"}]
+        path = fetcher.save_results("output/test.json")
+        self.assertIn("output/test.json", path)
 
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("运行测试 / Running tests")
-    print("=" * 60)
     unittest.main(verbosity=2)
